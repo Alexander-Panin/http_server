@@ -31,17 +31,33 @@ impl<T> Trie<T> {
 		node.value = Some(elem);
 	}
 
-	pub fn get<'a>(&self, v: impl IntoIterator<Item = &'a str>) -> Option<&T> {
+	pub fn get<'a>(&self, v: impl IntoIterator<Item = &'a str>) -> Option<(&T, Vec<RouteTokens>)> {
 		let mut node = &self.head;
+		let mut args = vec![];
 		for s in v {
-			let s = transform(s);
-			if node.map.contains_key(s) { 
-				node = node.map.get(s).unwrap();
+			let t = transform(s);
+			if node.map.contains_key(t) { 
+				node = node.map.get(t).unwrap();
 			} else {
 				return None;
 			}
+			args.push(mapping(t, s));
 		}
-		node.value.as_ref()
+		args.retain(|t| t != &RouteTokens::NaN);
+		node.value.as_ref().map(|fun| (fun, args))
+	}
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum RouteTokens { Int(i32), Usize(usize), Float(f32), NaN }
+
+fn mapping(t: &str, x: &str) -> RouteTokens {
+	use RouteTokens::{Float, Usize, Int, NaN};
+	match t {
+		"<float>" => Float(x.parse::<f32>().unwrap()),
+		"<usize>" => Usize(x.parse::<usize>().unwrap()),
+		"<int>" => Int(x.parse::<i32>().ok().unwrap()),
+		_ => NaN,
 	}
 }
 

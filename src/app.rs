@@ -1,7 +1,7 @@
 use std::error::Error;
 use crate::server::Server;
 use crate::request::Request;
-use crate::trie::Trie;
+use crate::trie::{Trie, RouteTokens};
 
 unsafe fn make_static<T>(t: &T) -> &'static T {
     std::mem::transmute(t)
@@ -9,7 +9,7 @@ unsafe fn make_static<T>(t: &T) -> &'static T {
 
 #[derive(Default)]
 pub struct App {
-	map: Trie<Box<dyn Fn(Request) -> String + Send + Sync>>,
+	map: Trie<fn(Request, Vec<RouteTokens>) -> String>,
 }
 
 impl App {
@@ -21,10 +21,12 @@ impl App {
 
 	pub async fn handle(&self, req: Request) -> String {
 		let b = req.url.split('/').filter(|s| !s.is_empty());
-		self.map.get(b).map(|fun| fun(req)).unwrap_or("Not found".to_owned())
+		self.map.get(b)
+			.map(|(fun, args)| fun(req, args))
+			.unwrap_or("Not found".to_owned())
 	}
 
-	pub fn service(&mut self, key: &str, fun: Box<dyn Fn(Request) -> String + Send + Sync>) {
+	pub fn service(&mut self, key: &str, fun: fn(Request, Vec<RouteTokens>) -> String) {
 		let b = key.split('/').filter(|s| !s.is_empty());
 		self.map.insert(b, fun);
 	}
