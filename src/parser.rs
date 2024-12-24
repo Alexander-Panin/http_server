@@ -15,7 +15,7 @@ impl Parser<'_> {
 		let (mut info, mut headers) = (vec![], vec![]); 
 		let mut iter = self.s.split("\r\n");
 		for x in iter.next()?.split(' ') { 
-			info.push(x.to_owned()); 
+			info.push(x); 
 		}
 		for x in iter.by_ref() {
 			if x.is_empty() { break; }

@@ -10,7 +10,6 @@ path = "src/lib.rs"
 path = "src/main.rs"
 name = "http_server"
 
-
 [dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "io-util", "net"] }
 

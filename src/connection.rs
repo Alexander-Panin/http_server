@@ -6,13 +6,13 @@ use crate::parser::Parser;
 use crate::app::App;
 
 pub struct Connection {
-	socket: Socket
+	socket: Socket,
 }
 
 impl Connection {
 	pub fn new(stream: TcpStream) -> Self {
 		Connection {
-			socket: Socket::new(stream)
+			socket: Socket::new(stream),
 		}
 	}
 }
