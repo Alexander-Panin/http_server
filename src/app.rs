@@ -15,6 +15,7 @@ pub struct App {
 impl App {
 	pub async fn start(&self, addr: &str) -> Result<(), Box<dyn Error>> {
 	    let mut server = Server::bind(addr).await?;
+	    // safe: `app` should be alive before termination
 	    server.accept(unsafe { make_static(self) }).await?;
     	Ok(())
 	}
@@ -26,7 +27,7 @@ impl App {
 			.unwrap_or("Not found".to_owned())
 	}
 
-	pub fn service(&mut self, key: &str, fun: fn(Request, Vec<RouteTokens>) -> String) {
+	pub fn service(&mut self, key: &'static str, fun: fn(Request, Vec<RouteTokens>) -> String) {
 		let b = key.split('/').filter(|s| !s.is_empty());
 		self.map.insert(b, fun);
 	}

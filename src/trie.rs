@@ -6,7 +6,7 @@ pub struct Trie<T> {
 
 struct Node<T> {
 	value: Option<T>,
-	map: HashMap<String, Node<T>> 
+	map: HashMap<&'static str, Node<T>> 
 }
 
 impl<T> Default for Trie<T> {
@@ -17,14 +17,14 @@ impl<T> Default for Trie<T> {
 }
 
 impl<T> Trie<T> {
-	pub fn insert<'a>(&mut self, v: impl IntoIterator<Item = &'a str>, elem: T) {
+	pub fn insert(&mut self, v: impl IntoIterator<Item = &'static str>, elem: T) {
 		let mut node = &mut self.head;
 		for s in v {
 			if node.map.contains_key(s) { 
 				node = node.map.get_mut(s).unwrap();
 			} else {
 				let next = Node { value: None, map: HashMap::new() };
-				node.map.insert(s.to_owned(), next);
+				node.map.insert(s, next);
 				node = node.map.get_mut(s).unwrap(); 
 			}
 		}
@@ -35,15 +35,14 @@ impl<T> Trie<T> {
 		let mut node = &self.head;
 		let mut args = vec![];
 		for s in v {
-			let t = transform(s);
-			if node.map.contains_key(t) { 
-				node = node.map.get(t).unwrap();
+			let (s, token) = mapping(s);
+			if node.map.contains_key(s) { 
+				node = node.map.get(s).unwrap();
 			} else {
 				return None;
 			}
-			args.push(mapping(t, s));
+			if token != RouteTokens::NaN { args.push(token); }
 		}
-		args.retain(|t| t != &RouteTokens::NaN);
 		node.value.as_ref().map(|fun| (fun, args))
 	}
 }
@@ -51,24 +50,15 @@ impl<T> Trie<T> {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum RouteTokens { Int(i32), Usize(usize), Float(f32), NaN }
 
-fn mapping(t: &str, x: &str) -> RouteTokens {
-	use RouteTokens::{Float, Usize, Int, NaN};
-	match t {
-		"<float>" => Float(x.parse::<f32>().unwrap()),
-		"<usize>" => Usize(x.parse::<usize>().unwrap()),
-		"<int>" => Int(x.parse::<i32>().ok().unwrap()),
-		_ => NaN,
-	}
-}
-
-fn transform(s: &str) -> &str {
+fn mapping(s: &str) -> (&str, RouteTokens) {
+	use RouteTokens::{ Int, Usize, Float, NaN };
 	let is_usize = s.starts_with(|c: char| c.is_ascii_digit());
 	let is_float = is_usize && s.contains('.');
 	let is_int = s.starts_with('-') && s.contains(|c: char| c.is_ascii_digit());
 	match [is_float, is_usize, is_int] {
-		[true, _, _] => "<float>",
-		[_, true, _] => "<usize>",
-		[_, _, true] => "<int>",
-		_ => s,
+		[true, _, _] => ("<float>", Float(s.parse::<f32>().unwrap())),
+		[_, true, _] => ("<usize>", Usize(s.parse::<usize>().unwrap())),
+		[_, _, true] => ("<int>", Int(s.parse::<i32>().ok().unwrap())),
+		_ => (s, NaN),
 	}
 }
