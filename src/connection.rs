@@ -24,7 +24,6 @@ impl Connection	{
 			let s = std::str::from_utf8(&self.socket.buf[..n])?;
 			let req = Parser::new(s).parse().unwrap();
 			let resp = app.handle(req).await;
-	        self.socket.write_headers(resp.len()).await?;
 	        self.socket.write_all(resp).await?;
 	    }
 	    Ok(())

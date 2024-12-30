@@ -19,12 +19,10 @@ impl Socket {
 		Ok(self.stream.read(&mut self.buf).await?)
 	}
 
-	pub async fn write_headers(&mut self, n: usize) -> Result<(), Box<dyn Error>> {
-		let x = format!("HTTP/1.1 200 OK\r\nContent-Length: {n}\r\n\n");
-		Ok(self.stream.write_all(x.as_bytes()).await?)
-	}
-
 	pub async fn write_all(&mut self, s: String) -> Result<(), Box<dyn Error>> {
-		Ok(self.stream.write_all(&s.into_bytes()).await?)
+		let x = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\n", s.len());
+		self.stream.write_all(&x.into_bytes()).await?;
+		self.stream.write_all(&s.into_bytes()).await?;
+		Ok(())
 	}
 }

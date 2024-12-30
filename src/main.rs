@@ -15,11 +15,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     route![app, "/hello/world", |req| format!("XXX {:?}", req.body) ];
     route![app, "/foo/bar/<usize>/<int>", |x,y,_req| { format!("{:?} {:?}", x, y) }];
     route![app, "/", || "Hello world".to_owned()];
-    route![app, "/foo/bar/<float>", |x,_req| format!("XXX {:?}", x) ];
+    route![app, "/measure/<float>/and/<int>", |x,y,_req| format!("{:?} and {:?}", x, y)];
 
     app.start(&addr).await?;
     Ok(())
 }
-
-
-
