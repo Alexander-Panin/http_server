@@ -3,13 +3,13 @@ use crate::server::Server;
 use crate::request::Request;
 use crate::trie::{Trie, RouteTokens};
 
-unsafe fn make_static<T>(t: &T) -> &'static T {
-    std::mem::transmute(t)
-}
-
 #[derive(Default)]
 pub struct App {
 	map: Trie<fn(Request, Vec<RouteTokens>) -> String>,
+}
+
+unsafe fn make_static<T>(t: &T) -> &'static T {
+    std::mem::transmute(t)
 }
 
 impl App {

@@ -19,10 +19,9 @@ impl Connection {
 
 impl Connection	{
 	pub async fn start(&mut self, app: &App) -> Result<(), Box<dyn Error>> {
-		let n = self.socket.read().await?;
-		if n != 0 {
-			let s = std::str::from_utf8(&self.socket.buf[..n])?;
-			let req = Parser::new(s).parse().unwrap();
+		let s = self.socket.read_all().await?;
+		if !s.is_empty() {
+			let req = Parser::new(s).parse().ok_or("failed to parse")?;
 			let resp = app.handle(req).await;
 	        self.socket.write_all(resp).await?;
 	    }
