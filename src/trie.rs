@@ -43,7 +43,7 @@ impl<T> Trie<T> {
 			}
 			if token != RouteTokens::NaN { args.push(token); }
 		}
-		node.value.as_ref().map(|fun| (fun, args))
+		node.value.as_ref().map(|elem| (elem, args))
 	}
 }
 

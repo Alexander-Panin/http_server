@@ -12,10 +12,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     
     let mut app = App::default();
 
-    route![app, "/hello/world", |req| format!("XXX {:?}", req.body) ];
-    route![app, "/foo/bar/<usize>/<int>", |x,y,_req| { format!("{:?} {:?}", x, y) }];
     route![app, "/", || "Hello world".to_owned()];
+    route![app, "/products/<usize>", |id,req| { format!("url {:?} and id {:?}", req.url, id) }];
     route![app, "/measure/<float>/and/<int>", |x,y,_req| format!("{:?} and {:?}", x, y)];
+    route![app, "/pong/", |req| format!("XXX {:?}", req.body) ];
 
     app.start(&addr).await?;
     Ok(())
