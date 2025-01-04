@@ -53,6 +53,7 @@ pub enum RouteTokens { Int(i32), Usize(usize), Float(f32), NaN }
 fn mapping(s: &str) -> (&str, RouteTokens) {
 	use RouteTokens::{ Int, Usize, Float, NaN };
 	let is_usize = s.starts_with(|c: char| c.is_ascii_digit());
+	// bug: fix me -> is_int
 	let is_int = s.starts_with('-') && s[1..].starts_with(|c: char| c.is_ascii_digit());
 	let is_float = (is_usize || is_int) && s.contains('.');
 	match [is_float, is_usize, is_int] {
