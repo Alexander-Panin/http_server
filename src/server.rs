@@ -2,7 +2,7 @@ use tokio::net::{TcpListener};
 use std::error::Error;
 
 use crate::connection::Connection;
-use crate::app::App;
+use crate::app::Router;
 
 pub struct Server {
 	listener: TcpListener,
@@ -15,7 +15,7 @@ impl Server {
 	    Ok(Server{listener})
 	}
 
-	pub async fn accept(&mut self, app: &'static App) -> Result<(), Box<dyn Error>> {
+	pub async fn accept(&mut self, app: impl Router + Send + Copy + 'static) -> Result<(), Box<dyn Error>> {
 		loop {
 			let (stream, _) = self.listener.accept().await?;
 			tokio::spawn(async move {

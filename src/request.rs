@@ -1,4 +1,7 @@
-#[derive(Default, Debug, Clone)]
+use std::collections::HashMap;
+use std::any::{TypeId, Any};
+
+#[derive(Default, Debug)]
 pub struct Request {
 	pub method: String,
 	pub url: String,
@@ -6,6 +9,7 @@ pub struct Request {
 	pub query: String,
 	pub headers: Vec<(String, String)>,
 	pub body: String,  
+	pub context: HashMap<TypeId, Box<dyn Any + Send>>,
 }
 
 fn parse_url(s: &str) -> (String, String) {
@@ -21,6 +25,6 @@ impl Request {
 		let version = info.pop()?.to_owned();
 		let (url, query) = parse_url(info.pop()?);
 		let method = info.pop()?.to_owned();
-		Some(Request {method, url, query, version, headers, body})
+		Some(Request {method, url, query, version, headers, body, context: HashMap::new()})
 	}
 }

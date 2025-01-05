@@ -3,7 +3,7 @@ use std::error::Error;
 
 use crate::socket::Socket;
 use crate::parser::Parser;
-use crate::app::App;
+use crate::app::Router;
 
 pub struct Connection {
 	socket: Socket,
@@ -18,7 +18,7 @@ impl Connection {
 }
 
 impl Connection	{
-	pub async fn start(&mut self, app: &App) -> Result<(), Box<dyn Error>> {
+	pub async fn start(&mut self, app: impl Router) -> Result<(), Box<dyn Error>> {
 		let s = self.socket.read_all().await?;
 		if !s.is_empty() {
 			let req = Parser::new(s).parse().ok_or("failed to parse")?;
