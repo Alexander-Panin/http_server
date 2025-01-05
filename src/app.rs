@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::future::Future;
 use std::marker::PhantomData;
+use std::collections::HashMap;
 use std::any::Any;
 use crate::server::Server;
 use crate::request::Request;
@@ -10,14 +11,16 @@ pub trait Router {
 	fn handle(&self, req: Request) -> impl Future<Output = String> + Send;
 }
 
-pub trait Middleware {
-	fn run(&self, req: &Request) -> Box<dyn Any + Send>;
+pub trait Middleware: Default + Send + Sync + 'static {
+	fn run(&self, req: &mut Request);
 }
 
 // todo: example
 impl Middleware for u32 {
-	fn run(&self, _req: &Request) -> Box<dyn Any + Send> {
-		Box::new(*self)
+	fn run(&self, req: &mut Request) { 
+		let x: Box<dyn Any + Send> = Box::new(*self);
+       	req.context.as_mut().unwrap().insert((*x).type_id(), x);
+		println!("{:?}", req);
 	}
 }
 
@@ -27,24 +30,19 @@ impl Router for &App<()> {
 	}
 }
 
-impl<T: Middleware + Default + Send + Sync + 'static> Router for &App<(T,)> {
+impl<T: Middleware> Router for &App<(T,)> {
 	fn handle(&self, mut req: Request) -> impl Future<Output = String> + Send { 
-		let x: Box<dyn Any + Send> = T::default().run(&req);
-		req.context.insert((*x).type_id(), x);
+		req.context = Some(HashMap::new());
+		T::default().run(&mut req);
 		App::<(T,)>::handle(self, req)
 	}
 }
 
-impl<T,Y> Router for &App<(T, Y)>
-where  
-	T: Middleware + Default + Send + Sync + 'static,
-	Y: Middleware + Default + Send + Sync + 'static,
-{
+impl<T: Middleware, Y: Middleware> Router for &App<(T, Y)> {
 	fn handle(&self, mut req: Request) -> impl Future<Output = String> + Send {
-		let x: Box<dyn Any + Send> = T::default().run(&req);
-		req.context.insert((*x).type_id(), x);
-		let y: Box<dyn Any + Send> = Y::default().run(&req);
-		req.context.insert((*y).type_id(), y);
+		req.context = Some(HashMap::new());
+		T::default().run(&mut req);
+		Y::default().run(&mut req);
 		App::<(T,Y)>::handle(self, req)
 	}
 }
