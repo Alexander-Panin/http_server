@@ -3,49 +3,11 @@ use std::future::Future;
 use std::marker::PhantomData;
 use std::collections::HashMap;
 use std::any::Any;
+use tokio::time::Duration;
 use crate::server::Server;
 use crate::request::Request;
 use crate::trie::{Trie, RouteTokens};
-
-pub trait Router {
-	fn handle(&self, req: Request) -> impl Future<Output = String> + Send;
-}
-
-pub trait Middleware: Default + Send + Sync + 'static {
-	fn run(&self, req: &mut Request);
-}
-
-// todo: example
-impl Middleware for u32 {
-	fn run(&self, req: &mut Request) { 
-		let x: Box<dyn Any + Send> = Box::new(*self);
-       	req.context.as_mut().unwrap().insert((*x).type_id(), x);
-		println!("{:?}", req);
-	}
-}
-
-impl Router for &App<()> {
-	fn handle(&self, req: Request) -> impl Future<Output = String> + Send {
-		App::<()>::handle(self, req)
-	}
-}
-
-impl<T: Middleware> Router for &App<(T,)> {
-	fn handle(&self, mut req: Request) -> impl Future<Output = String> + Send { 
-		req.context = Some(HashMap::new());
-		T::default().run(&mut req);
-		App::<(T,)>::handle(self, req)
-	}
-}
-
-impl<T: Middleware, Y: Middleware> Router for &App<(T, Y)> {
-	fn handle(&self, mut req: Request) -> impl Future<Output = String> + Send {
-		req.context = Some(HashMap::new());
-		T::default().run(&mut req);
-		Y::default().run(&mut req);
-		App::<(T,Y)>::handle(self, req)
-	}
-}
+use crate::routing::{Router, Middleware};
 
 #[derive(Default)]
 pub struct App<T> {
@@ -58,11 +20,16 @@ unsafe fn make_static<T>(t: &T) -> &'static T {
 }
 
 impl<T: Send + Sync + 'static> App<T> where for<'a> &'a App<T>: Router {
-	pub async fn start(&self, addr: &str) -> Result<(), Box<dyn Error>> {
-	    let mut server = Server::bind(addr).await?;
+	pub async fn start_with_timeout(&self, addr: &str, timeout: Duration) -> Result<(), Box<dyn Error>> {
+	    let mut server = Server::bind(addr, timeout).await?;
 	    // safe: `app` should be alive before termination
 	    server.accept(unsafe { make_static(self) }).await?;
     	Ok(())
+	}
+
+	const TIMEOUT: Duration = Duration::from_millis(100); 
+	pub async fn start(&self, addr: &str) -> Result<(), Box<dyn Error>> {
+		self.start_with_timeout(addr, Self::TIMEOUT).await	
 	}
 
 	pub async fn handle(&self, req: Request) -> String {
@@ -77,3 +44,39 @@ impl<T: Send + Sync + 'static> App<T> where for<'a> &'a App<T>: Router {
 		self.map.insert(b, fun);
 	}
 }
+
+pub type SimpleApp = App<()>;
+
+// todo: example
+impl Middleware for u32 {
+	fn run(&self, req: &mut Request) { 
+		let x: Box<dyn Any + Send> = Box::new(*self);
+       	req.context.as_mut().unwrap().insert((*x).type_id(), x);
+	}
+}
+
+macro_rules! routes_impls {
+    ( $x:ident, $( $y:ident $(,)?)* ) => {
+        impl<$x: Middleware, $( $y: Middleware ),*> Router for &App<($x, $( $y ),*)> {
+			fn handle(&self, mut req: Request) -> impl Future<Output = String> + Send {
+				req.context = Some(HashMap::new());
+				$x::default().run(&mut req);
+				$(
+					$y::default().run(&mut req);
+				)*
+				App::<($x, $( $y ),*)>::handle(self, req)
+			}
+        }
+        routes_impls!($( $y, )*);
+    };
+
+    () => {
+		impl Router for &App<()> {
+			fn handle(&self, req: Request) -> impl Future<Output = String> + Send {
+				App::<()>::handle(self, req)
+			}
+		}
+    };
+}
+
+routes_impls![A,B,C,D, E,F,G,H, I,J,K,L, M,N,O,P,Q];

@@ -1,3 +1,14 @@
+use std::future::Future;
+use crate::request::Request;
+
+pub trait Router {
+    fn handle(&self, req: Request) -> impl Future<Output = String> + Send;
+}
+
+pub trait Middleware: Default + Send + Sync + 'static {
+    fn run(&self, req: &mut Request);
+}
+
 #[macro_export]
 macro_rules! route {
     ( $app:ident, $path:expr, || $handler:expr) => {
